@@ -59,6 +59,9 @@ def scan(path):
 #Rename function
 def rename(list_to_rename):
 	sorted_list = sorted(list_to_rename)
+	if len(sorted_list) == 0:
+		print "No files found"
+		exit()
 	global counter
 
 	#Set current root

@@ -62,12 +62,12 @@ def rename(list_to_rename):
 	global counter
 
 	#Set current root
-	root = re.findall('^.*PLATE\.',list_to_rename[0])[0]
+	root = re.findall('(^.*\.)[0-9]+\.',list_to_rename[0])[0]
 	# print 'setting root as: %s' %root
 
 	for item in sorted_list:
 		#compare root with current root
-		stripped_item = re.findall('^.*PLATE\.',item)[0]
+		stripped_item = re.findall('(^.*\.)[0-9]+\.',item)[0]
 		if stripped_item == root:
 			log.write("%s > " %(item))
 			new_name = stripped_item + str(counter) + '.dpx'
@@ -95,3 +95,6 @@ if __name__ == '__main__':
 	main()
 
 
+#Helpful regex's:
+# \.[0-9]+\.dpx   - collects from the second to last . through to the end of a .dpx file
+# (^.*\.)[0-9]+\.  - collects from start of name to second to last '.' inclusive

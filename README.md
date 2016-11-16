@@ -1,6 +1,4 @@
-#Renamer for 4k dpx files
+#Renamer for 2k dpx files
 
-Requires ImageMagick and Wand to be installed.
-
-brew install imagemagick
-pip install wand
+New Version (renamer2.py) now relies on names of parent folders for file resolution.
+Logs to a file called renamerlog.txt

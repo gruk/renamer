@@ -62,8 +62,8 @@ def rename(item, name, path):
 	#add new number to the name and add .dpx
 	new_name = split_name + '.' + str(counter) + '.dpx'
 	#print finalised name
-	new_full_name = path + '/' + new_name
-	os.rename(item, new_full_name)
+	new_full_path = path + '/' + new_name
+	os.rename(item, new_full_path)
 
 if __name__ == '__main__':
 	main()

@@ -1,70 +1,163 @@
 #!/usr/bin/env python
 
 #IMPORTING MODULES
-import os, re
-from wand.image import Image
-
+import os, re, sys
+from time import localtime, strftime
 #DEFINE GLOBAL VARIABLE
-counter = 1000
+counter = 1001
+
+#CREATE AND OPEN LOG FILE WITH CURRENT TIME AND DATE ATTACHED
+current_time = strftime("%Y%m%d%H%M", localtime())
+os.system("touch renamerlog%s.txt" % current_time)
+log = open("renamerlog%s.txt" % current_time, 'w')
+
 
 def main():
 	#INTRO
-	print "File renumbererer for Tony"
+	print "File renumbererer"
+	print "Designed for use with GTS_2KDRAMA files"
+	print "Will rename .dpx files which are nested inside 2k resolution folders provided they are larger than 15MB"
 	print ""
-	#Collect Path
-	path = raw_input("enter folder path: ").strip()
-	#Scan Path
-	scan(path)
+	if len(sys.argv) < 2:
+		#Collect Path
+		path = raw_input("enter folder path: ").strip()
+		#Scan Path
+		scan(path)
+	else:
+		path = sys.argv[1]
+		scan(path)
+
+
 
 def scan(path):
 	#Create list
-
+	to_rename = []
 	#Look through Directory
 	for root, dirs, files in os.walk(path):
 		#Loop through all files
 		for name in files:
-			#If file is hidden - ignore it. Otherwise send it to checker
-			if re.search('^\..*', name) == None:
-				# pass both path+name and filename to checker
-				check(os.path.join(root, name), name, root)
-			else:
+			#Check to see if resolution folder starts with a '2'
+			if re.search('2[0-9+]{3}[x][0-9+]{4}', root) == None:
 				pass
-
-
-#Check Resolution of files
-def check(item,name, path):
-	#If file size is less than 15MB
-	if os.stat(item).st_size <= 15000000:
-		#Use ImageMagick to check the dimensions of the image
-		with Image(filename=item) as img:
-			#If image width is less than 2200 pixels - send it to the renaming function
-			if img.width <= 2200:
-				#pass path+name and name to renamer
-				rename(item, name, path)
-			#Otherwise print error
 			else:
-				print "ERROR: File '%s' has a width greater than 2200 pixels" %item
-	#Otherwise print error
-	else:
-		print "ERROR: file '%s' is larger than 15MB" %item
-
+				#If file is hidden - ignore it. Otherwise send it to renamer
+				if re.search('^\..*', name) == None:
+					#If file size is less than 15MB
+					if os.stat(os.path.join(root, name)).st_size <= 15000000:
+						#If file is a .dpx then send to renamer
+						if name[-4:] == ".dpx":
+							# pass both path+name and filename to renamer
+							to_rename.append(os.path.join(root, name))
+						else:
+							pass
+					else:
+						pass
+				else:
+					pass
+	sort(to_rename)
+			
 #Rename function
-def rename(item, name, path):
+def sort(list_to_rename):
+	sorted_list = sorted(list_to_rename)
+	if len(sorted_list) == 0:
+		print "No files found"
+		exit()
 	global counter
-	# add 1 to the counter
-	counter += 1
-	#Prove that data gets here
-	print "file '%s' at path '%s' will be renamed to: " %(name, item)
-	#set name variable
-	init_name = name
-	#remove current numbers from the name
-	split_name = init_name.split('.',1)[0]
-	#add new number to the name and add .dpx
-	new_name = split_name + '.' + str(counter) + '.dpx'
-	#print finalised name
-	new_full_path = path + '/' + new_name
-	os.rename(item, new_full_path)
+
+	#Set current root
+	root = re.findall('(^.*\.)[0-9]+\.',list_to_rename[0])[0]
+	# print 'setting root as: %s' %root
+	# create empty dictionary
+	rename_dict = {}
+	for item in sorted_list:
+		#compare root with current root
+		stripped_item = re.findall('(^.*\.)[0-9]+\.',item)[0]
+		if stripped_item == root:
+			# log.write("%s > " %(item))
+			new_name = stripped_item + str(counter) + '.dpx'
+			# log.write(new_name + "\n")
+			rename_dict[item] = new_name
+			# add 1 to the counter
+			counter += 1
+		#if root is not the same as previous, reset counter to 1001
+		else:
+			counter = 1001
+			root = stripped_item
+			# log.write("%s > " %(item))
+			# print "file '%s' will be renamed " %(item)
+			new_name = stripped_item + str(counter) + '.dpx'
+			# print new_name
+			# log.write(new_name+ "\n")
+			rename_dict[item] = new_name
+			# add 1 to the counter
+			counter += 1
+	checkdict(rename_dict)
+	# rename(rename_dict)
+	
+
+def checkdict(dictionary_thing):
+	#create dictionary
+	orig_dict = dictionary_thing
+	#create dictionary for dups
+	error_dict = {}
+	#create list for all values from original dictionary
+	values = []
+	#create list of keys that need deleting
+	to_delete = []
+	for key in orig_dict:
+		#populate values list
+		values.append(orig_dict[key])
+	# if the list is not empty, proceed with sorting out the dups
+	if len(values) != 0:
+		for key in orig_dict:
+			#if a key in the original dict matches a value in the list
+			if key in values:
+				# create a variable with adjusted name
+				dup_key = key + '.retry'
+				# and add it to the error dictionary
+				error_dict[dup_key] = orig_dict[key]
+				# add problem key to to_delete list
+				to_delete.append(key)
+				# rename file
+				os.rename(key, dup_key)
+		for key in to_delete:
+			if key in orig_dict:
+				del orig_dict[key]
+		#write log files
+		for key in error_dict:
+			# print "rename from %s to %s" % (key, error_dict[key]) 
+			log.write(key+ ' > ' + error_dict[key]+ '\n')
+		for key in orig_dict:
+			# print "rename from %s to %s" % (key, orig_dict[key])
+			log.write(key+ ' > ' + orig_dict[key]+ '\n')
+		rename(orig_dict)
+		# print error_dict
+		rename(error_dict)
+	else:
+		for key in orig_dict:
+			# print "rename from %s to %s" % (key, orig_dict[key])
+			log.write(key+ ' > ' + orig_dict[key]+ '\n')
+		print 'print working as normal - no dups'
+		rename(orig_dict)
+	log.close()
+
+
+def rename(dictionary_thing):
+	file_lists = dictionary_thing
+	print 'renaming'
+	for key in file_lists:
+		print 'from :' + key
+		print 'to :' + file_lists[key]
+		os.rename(key, file_lists[key])
+	print 'renaming has been done'
+	print 'log file has been written'
+	print "%i files updated" % len(file_lists)
+	log.close()
 
 if __name__ == '__main__':
 	main()
 
+
+#Helpful regex's:
+# \.[0-9]+\.dpx   - collects from the second to last . through to the end of a .dpx file
+# (^.*\.)[0-9]+\.  - collects from start of name to second to last '.' inclusive
